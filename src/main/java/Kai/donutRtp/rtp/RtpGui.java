@@ -1,6 +1,6 @@
-package EmberLabs.server.rtp;
+package Kai.donutRtp.rtp;
 
-import EmberLabs.server.utils.ColorUtil;
+import Kai.donutRtp.util.ColorUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;

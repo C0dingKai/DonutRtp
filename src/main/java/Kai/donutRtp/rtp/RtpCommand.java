@@ -1,4 +1,4 @@
-package EmberLabs.server.rtp;
+package Kai.donutRtp.rtp;
 
 import org.bukkit.Bukkit;
 import org.bukkit.World;

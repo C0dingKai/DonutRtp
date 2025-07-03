@@ -1,0 +1,22 @@
+# DonutRTP Configuration by C0dingKai
+
+cooldown: 15 #seconds
+countdown: 5 #seconds aswell
+
+overworld:
+  min-x: -1000
+  max-x: 1000
+  min-z: -1000
+  max-z: 1000
+
+nether:
+  min-x: -1500
+  max-x: 1500
+  min-z: -750
+  max-z: 750
+
+end:
+  min-x: -5000
+  max-x: 5000
+  min-z: -2500
+  max-z: 2500
