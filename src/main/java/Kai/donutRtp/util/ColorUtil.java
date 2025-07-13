@@ -1,27 +1,24 @@
 package Kai.donutRtp.util;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import net.md_5.bungee.api.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+
+import java.util.List;
 
 public class ColorUtil {
-    private static final Pattern HEX_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})");
 
-    public static String color(String input) {
-        Matcher matcher = HEX_PATTERN.matcher(input);
-        StringBuffer buffer = new StringBuffer();
-
-        while(matcher.find()) {
-            String hex = matcher.group(1);
-            String replacement = ChatColor.of("#" + hex).toString();
-            matcher.appendReplacement(buffer, replacement);
-        }
-
-        matcher.appendTail(buffer);
-        return ChatColor.translateAlternateColorCodes('&', buffer.toString());
+    public static Component parse(String input) {
+        return MiniMessage.miniMessage().deserialize(input).decoration(TextDecoration.ITALIC, false);
     }
 
-    public static String stripColor(String input) {
-        return ChatColor.stripColor(color(input));
+    public static List<Component> parseList(List<String> input) {
+        return input.stream()
+                .map(ColorUtil::parse)
+                .toList();
+    }
+
+    public static Component empty() {
+        return Component.empty();
     }
 }
