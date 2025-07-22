@@ -15,6 +15,6 @@ public final class DonutRtp extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        System.out.println("[DonutRtp] Plugin has been disabled.");
+        getLogger().info("DonutRtp has been disabled");
     }
 }
