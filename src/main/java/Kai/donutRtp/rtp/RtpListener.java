@@ -11,6 +11,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 public class RtpListener implements Listener {
 
@@ -19,8 +20,9 @@ public class RtpListener implements Listener {
     private static final LinkedList<UUID> rtpQueue = new LinkedList<>();
     private static final Map<UUID, String> playerDimension = new HashMap<>();
     private static final Set<UUID> teleportingPlayers = new HashSet<>();
-    private static boolean processing = false;
     private static final Map<UUID, Long> rtpCooldowns = new HashMap<>();
+    private static boolean processing = false;
+
     private static long getCooldownMillis() {
         return plugin.getConfig().getLong("cooldown", 15) * 1000L;
     }
@@ -28,7 +30,6 @@ public class RtpListener implements Listener {
     private static int getCountdownSeconds() {
         return plugin.getConfig().getInt("countdown", 5);
     }
-
 
     public RtpListener(DonutRtp pluginInstance) {
         plugin = pluginInstance;
@@ -85,10 +86,10 @@ public class RtpListener implements Listener {
 
         if (rtpCooldowns.containsKey(uuid)) {
             long lastTeleport = rtpCooldowns.get(uuid);
-            long timeLeft = lastTeleport +getCooldownMillis() - currentTime;
+            long timeLeft = lastTeleport + getCooldownMillis() - currentTime;
             if (timeLeft > 0) {
                 player.closeInventory();
-                player.sendMessage(ColorUtil.color("&cYou rtp for another " + (timeLeft / 1000) + "s."));
+                player.sendMessage(ColorUtil.color("&cYou can't rtp for another " + (timeLeft / 1000) + "s."));
                 player.sendActionBar(ColorUtil.color("&cYou can't rtp for another " + (timeLeft / 1000) + "s."));
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
@@ -96,7 +97,6 @@ public class RtpListener implements Listener {
         }
 
         teleportingPlayers.add(uuid);
-
         player.closeInventory();
         Location startLoc = player.getLocation();
 
@@ -119,17 +119,20 @@ public class RtpListener implements Listener {
                     player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
                     seconds--;
                 } else {
+                    cancel();
+
                     if (rtpQueue.isEmpty()) {
-                        Location safeLocation = findSafeLocation(world, dim);
-                        Bukkit.getScheduler().runTask(plugin, () -> {
-                            if (player.isOnline()) {
-                                player.teleport(safeLocation);
-                                player.playSound(safeLocation, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
-                                player.sendActionBar(ColorUtil.color("&#b6cbfaYou teleported to a random location"));
-                                teleportingPlayers.remove(uuid);
-                                rtpCooldowns.put(uuid, System.currentTimeMillis());
-                            }
-                        });
+                        CompletableFuture
+                                .supplyAsync(() -> findSafeLocation(world, dim))
+                                .thenAcceptAsync(safeLocation -> {
+                                    if (player.isOnline()) {
+                                        player.teleport(safeLocation);
+                                        player.playSound(safeLocation, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
+                                        player.sendActionBar(ColorUtil.color("&#b6cbfaYou teleported to a random location"));
+                                    }
+                                    teleportingPlayers.remove(uuid);
+                                    rtpCooldowns.put(uuid, System.currentTimeMillis());
+                                }, Bukkit.getScheduler().getMainThreadExecutor(plugin));
                     } else {
                         rtpQueue.add(uuid);
                         playerDimension.put(uuid, dim);
@@ -137,7 +140,6 @@ public class RtpListener implements Listener {
                         notifyQueuePosition(player);
                         processQueue();
                     }
-                    cancel();
                 }
             }
         }.runTaskTimer(plugin, 0L, 20L);
@@ -184,21 +186,19 @@ public class RtpListener implements Listener {
                 String dim = playerDimension.get(uuid);
                 World world = getWorldByDimension(dim);
 
-                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                    Location safeLocation = findSafeLocation(world, dim);
+                CompletableFuture
+                        .supplyAsync(() -> findSafeLocation(world, dim))
+                        .thenAcceptAsync(safeLocation -> {
+                            if (player.isOnline()) {
+                                player.teleport(safeLocation);
+                                player.playSound(safeLocation, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
+                                player.sendActionBar(ColorUtil.color("&7You teleported to a random location"));
+                            }
 
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        if (player.isOnline()) {
-                            player.teleport(safeLocation);
-                            player.playSound(safeLocation, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
-                            player.sendActionBar(ColorUtil.color("&7You teleported to a random location"));
-                        }
-
-                        rtpQueue.remove(uuid);
-                        playerDimension.remove(uuid);
-                        teleportingPlayers.remove(uuid);
-                    });
-                });
+                            rtpQueue.remove(uuid);
+                            playerDimension.remove(uuid);
+                            teleportingPlayers.remove(uuid);
+                        }, Bukkit.getScheduler().getMainThreadExecutor(plugin));
             }
         }.runTaskTimer(plugin, 10L, 10L);
     }
@@ -218,7 +218,6 @@ public class RtpListener implements Listener {
         return getSafeLocation(world, minX, maxX, minZ, maxZ, check);
     }
 
-
     private static Location getSafeLocation(World world, int minX, int maxX, int minZ, int maxZ, SafeCheck check) {
         for (int i = 0; i < 1000; i++) {
             int x = random.nextInt(maxX - minX + 1) + minX;
@@ -230,11 +229,8 @@ public class RtpListener implements Listener {
         return new Location(world, 0.5, getSafeY(world, 0, 0), 0.5);
     }
 
-
-
     private static int getSafeY(World world, int x, int z) {
         if (world.getEnvironment() == World.Environment.NETHER) {
-
             int maxRoofY = 108;
             for (int y = maxRoofY; y > 1; y--) {
                 Material block = world.getBlockAt(x, y, z).getType();
@@ -263,7 +259,6 @@ public class RtpListener implements Listener {
                 && current.getType() == Material.AIR && above.getType() == Material.AIR;
     }
 
-
     private static boolean isSafeNetherLocation(Location loc) {
         if (loc.getY() >= 108) return false;
 
@@ -286,9 +281,9 @@ public class RtpListener implements Listener {
     private static boolean isTransparent(Block block) {
         return switch (block.getType()) {
             case AIR, CAVE_AIR, VOID_AIR, FERN, DEAD_BUSH, DANDELION, POPPY,
-                 BLUE_ORCHID, ALLIUM, AZURE_BLUET, RED_TULIP, ORANGE_TULIP, WHITE_TULIP, PINK_TULIP,
-                 OXEYE_DAISY, CORNFLOWER, LILY_OF_THE_VALLEY, WITHER_ROSE, SUNFLOWER, LILAC,
-                 ROSE_BUSH, PEONY, SWEET_BERRY_BUSH, GRAVEL -> true;
+                    BLUE_ORCHID, ALLIUM, AZURE_BLUET, RED_TULIP, ORANGE_TULIP, WHITE_TULIP, PINK_TULIP,
+                    OXEYE_DAISY, CORNFLOWER, LILY_OF_THE_VALLEY, WITHER_ROSE, SUNFLOWER, LILAC,
+                    ROSE_BUSH, PEONY, SWEET_BERRY_BUSH, GRAVEL -> true;
             default -> false;
         };
     }
