@@ -1,4 +1,4 @@
-package Kai.donutRtp.rtp;
+package dev.kai.donutrtp.rtp;
 
 import org.bukkit.Bukkit;
 import org.bukkit.World;

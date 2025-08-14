@@ -1,6 +1,6 @@
 name: DonutRtp
 version: '1.0'
-main: Kai.donutRtp.DonutRtp
+main: dev.kai.donutrtp.DonutRtp
 api-version: '1.21'
 author: [ C0dingKai ]
 website: github.com/C0dingKai

@@ -1,9 +1,11 @@
-package Kai.donutRtp.rtp;
+package dev.kai.donutrtp.rtp;
 
-import Kai.donutRtp.DonutRtp;
-import Kai.donutRtp.util.ColorUtil;
+
+import dev.kai.donutrtp.DonutRtp;
+import dev.kai.donutrtp.util.ColorUtil;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -68,6 +70,14 @@ public class RtpListener implements Listener {
         return plugin.getConfig().getInt("countdown", 5);
     }
 
+    public void startRtp(CommandSender sender, String dim, World world) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(ColorUtil.color("&cOnly players can use this command."));
+            return;
+        }
+        startRtp(player, dim, world);
+    }
+
     private void startRtp(Player player, String dim, World world) {
         UUID uuid = player.getUniqueId();
         long currentTime = System.currentTimeMillis();
@@ -89,7 +99,6 @@ public class RtpListener implements Listener {
                 return;
             }
         }
-
         teleportingPlayers.add(uuid);
         player.closeInventory();
         Location startLoc = player.getLocation();
@@ -114,17 +123,56 @@ public class RtpListener implements Listener {
                     seconds--;
                 } else {
                     cancel();
-                    CompletableFuture.supplyAsync(() -> findSafeLocation(world, dim))
-                            .thenAcceptAsync(loc -> {
-                                if (player.isOnline()) {
-                                    player.teleport(loc);
-                                    player.sendActionBar(ColorUtil.color("&#b6cbfaYou teleported to a random location"));
-                                    player.playSound(loc, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
-                                }
-                                teleportingPlayers.remove(uuid);
-                                rtpCooldowns.put(uuid, System.currentTimeMillis());
-                            }, Bukkit.getScheduler().getMainThreadExecutor(plugin));
+                    rtpQueue.add(uuid);
+                    playerDimension.put(uuid, dim);
+                    processQueue();
                 }
+            }
+        }.runTaskTimer(plugin, 0L, 20L);
+    }
+
+    private void processQueue() {
+        if (processingQueue) return;
+        processingQueue = true;
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (rtpQueue.isEmpty()) {
+                    processingQueue = false;
+                    cancel();
+                    return;
+                }
+
+                UUID uuid = rtpQueue.peek();
+                if (uuid == null) {
+                    rtpQueue.poll();
+                    return;
+                }
+
+                Player player = Bukkit.getPlayer(uuid);
+                if (player == null || !player.isOnline()) {
+                    rtpQueue.poll();
+                    playerDimension.remove(uuid);
+                    teleportingPlayers.remove(uuid);
+                    return;
+                }
+
+                String dim = playerDimension.get(uuid);
+                World world = getWorldByDimension(dim);
+
+                CompletableFuture.supplyAsync(() -> findSafeLocation(world, dim))
+                        .thenAcceptAsync(loc -> {
+                            if (player.isOnline()) {
+                                player.teleport(loc);
+                                player.sendActionBar(ColorUtil.color("&#b6cbfaYou teleported to a random location"));
+                                player.playSound(loc, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
+                            }
+                            teleportingPlayers.remove(uuid);
+                            rtpCooldowns.put(uuid, System.currentTimeMillis());
+                            rtpQueue.poll();
+                            playerDimension.remove(uuid);
+                        }, Bukkit.getScheduler().getMainThreadExecutor(plugin));
             }
         }.runTaskTimer(plugin, 0L, 20L);
     }
@@ -181,9 +229,9 @@ public class RtpListener implements Listener {
     private boolean isTransparent(Block block) {
         return switch (block.getType()) {
             case AIR, CAVE_AIR, VOID_AIR, FERN, DEAD_BUSH, DANDELION, POPPY,
-                    BLUE_ORCHID, ALLIUM, AZURE_BLUET, RED_TULIP, ORANGE_TULIP, WHITE_TULIP, PINK_TULIP,
-                    OXEYE_DAISY, CORNFLOWER, LILY_OF_THE_VALLEY, WITHER_ROSE, SUNFLOWER, LILAC,
-                    ROSE_BUSH, PEONY, SWEET_BERRY_BUSH, GRAVEL -> true;
+                 BLUE_ORCHID, ALLIUM, AZURE_BLUET, RED_TULIP, ORANGE_TULIP, WHITE_TULIP, PINK_TULIP,
+                 OXEYE_DAISY, CORNFLOWER, LILY_OF_THE_VALLEY, WITHER_ROSE, SUNFLOWER, LILAC,
+                 ROSE_BUSH, PEONY, SWEET_BERRY_BUSH, GRAVEL -> true;
             default -> false;
         };
     }

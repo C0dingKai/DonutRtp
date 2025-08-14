@@ -1,4 +1,4 @@
-package Kai.donutRtp.util;
+package dev.kai.donutrtp.util;
 
 import net.md_5.bungee.api.ChatColor;
 

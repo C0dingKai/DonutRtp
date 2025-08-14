@@ -1,6 +1,6 @@
-package Kai.donutRtp.rtp;
+package dev.kai.donutrtp.rtp;
 
-import Kai.donutRtp.util.ColorUtil;
+import dev.kai.donutrtp.util.ColorUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
