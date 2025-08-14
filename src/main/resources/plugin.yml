@@ -1,11 +1,10 @@
 name: DonutRtp
-version: '1.0'
+version: '${version}'
 main: dev.kai.donutrtp.DonutRtp
 api-version: '1.21'
-author: [ C0dingKai ]
+authors: [ C0dingKai ]
 website: github.com/C0dingKai
 commands:
   rtp:
-    description: Teleports you randomly
-    usage: /rtp
+
 
