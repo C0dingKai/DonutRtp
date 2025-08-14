@@ -15,10 +15,18 @@ import java.util.List;
 public class RtpCommand implements CommandExecutor, TabCompleter {
 
     private final List<String> options = Arrays.asList("overworld", "nether", "end");
+    private final RtpListener rtpListener;
+
+    public RtpCommand(RtpListener rtpListener) {
+        this.rtpListener = rtpListener;
+    }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player)) return false;
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("Only players can use this command.");
+            return true;
+        }
 
         if (args.length == 0) {
             RtpGui.open(player);
@@ -39,7 +47,7 @@ public class RtpCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            RtpListener.startRtp(player, dim, world);
+            rtpListener.startRtp(player, dim, world);
             return true;
         }
 
@@ -52,9 +60,7 @@ public class RtpCommand implements CommandExecutor, TabCompleter {
             String partial = args[0].toLowerCase();
             List<String> completions = new ArrayList<>();
             for (String option : options) {
-                if (option.startsWith(partial)) {
-                    completions.add(option);
-                }
+                if (option.startsWith(partial)) completions.add(option);
             }
             return completions;
         }

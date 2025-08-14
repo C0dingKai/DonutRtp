@@ -9,8 +9,9 @@ public final class DonutRtp extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        getServer().getPluginManager().registerEvents(new RtpListener(this), this);
-        getCommand("rtp").setExecutor(new RtpCommand());
+        RtpListener rtpListener = new RtpListener(this);
+        getCommand("rtp").setExecutor(new RtpCommand(rtpListener));
+        getServer().getPluginManager().registerEvents(rtpListener, this);
 
     }
 
